@@ -3,6 +3,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcryptjs = require('bcryptjs');
+const paginate = require('jw-paginate');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const { reset } = require('nodemon');
 const port = process.env.PORT || 5000;
@@ -24,7 +25,7 @@ function verifyJWT(req, res, next) {
     return res.status(401).send({ message: 'UnAuthorized access' });
   }
   const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+  jwt.verify(token, process.env.PH_ACCESS_TOKEN, function (err, decoded) {
     if (err) {
       return res.status(403).send({ message: 'Forbidden access' })
     }
@@ -33,10 +34,8 @@ function verifyJWT(req, res, next) {
   });
 }
 
-
-
+// MongoDB Connect
 const uri = "mongodb+srv://phadmin:qsg48P4FHaZuHdZP@cluster0.ak5hm.mongodb.net/?retryWrites=true&w=majority";
-
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
@@ -48,6 +47,7 @@ async function run() {
 
     // user creation
     app.post('/api/registration', async (req, res) => {
+      console.log(req.body)
       const email = req.body.email;
       const fullName = req.body.fullName;
       const password = req.body.password;
@@ -68,16 +68,16 @@ async function run() {
         res.send({ status: 200, message: 'User create successfull' })
       }
     });
+
     // Login
     app.post('/api/login', async (req, res) => {
       const email = req.body.email;
       const password = req.body.password;
       const requesterAccount = await usersCollection.findOne({ email: email });
-      console.log(requesterAccount)
       if (requesterAccount) {
         const isPasswordCorrect = bcryptjs.compareSync(password, requesterAccount.hashedPassword);
         if (isPasswordCorrect) {
-          const userToken = jwt.sign(email, process.env.ACCESS_TOKEN);
+          const userToken = jwt.sign(email, process.env.PH_ACCESS_TOKEN);
           res.send({ status: 200, message: 'Login Success', token: userToken })
         }
         else {
@@ -91,7 +91,6 @@ async function run() {
 
     // Add Billing
     app.post('/api/add-billing', verifyJWT, async (req, res) => {
-      console.log(req.decoded)
       const fullName = req.body.fullName;
       const email = req.body.email;
       const phone = req.body.phone;
@@ -104,13 +103,36 @@ async function run() {
       }
       const result = await billingCollection.insertOne(billing);
       res.send({ status: 200, message: `Add successful from ${req.decoded}` })
-
     });
+
+    // Billings List
+    app.get('/api/billing-list', async (req, res) => {
+      const billings = await billingCollection.find().toArray();
+      const page = parseInt(req.query.page) || 1;
+      // get pager object for specified page
+      const pageSize = 10;
+      const pager = paginate(billings.length, page, pageSize);
+      // get page of items from items array
+      const pageOfItems = billings.slice(pager.startIndex, pager.endIndex + 1);
+      res.send({ page: page, pageOfItems: pageOfItems });
+    });
+
+    // Edit Billing
+    app.patch('/api/update-billing/:id', async (req, res) => {
+      const id = req.params.id;
+      const newBilling = req.body;
+      console.log(newBilling)
+      const filter = { _id: ObjectId(id) };
+      const updatedBilling = await billingCollection.updateOne(filter, newBilling);
+      res.send(updatedBilling);
+    })
+
   }
   finally {
     // 
   }
 }
+run();
 
 // a. api/registration
 // b. api/login
@@ -119,7 +141,6 @@ async function run() {
 // e. api/update-billing/:id
 // f. api/delete-billing/:id
 
-run();
 
 
 
