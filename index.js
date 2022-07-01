@@ -1,11 +1,10 @@
 const express = require('express');
-var ObjectId = require('mongodb').ObjectID;
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcryptjs = require('bcryptjs');
 const paginate = require('jw-paginate');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const { reset } = require('nodemon');
 const port = process.env.PORT || 5000;
 const app = express();
@@ -36,7 +35,7 @@ function verifyJWT(req, res, next) {
 }
 
 // MongoDB Connect
-const uri = "mongodb+srv://phadmin:qsg48P4FHaZuHdZP@cluster0.ak5hm.mongodb.net/?retryWrites=true&w=majority";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ak5hm.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
