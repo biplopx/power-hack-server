@@ -74,6 +74,7 @@ async function run() {
       const email = req.body.email;
       const password = req.body.password;
       const requesterAccount = await usersCollection.findOne({ email: email });
+      console.log(process.env.PH_ACCESS_TOKEN)
       if (requesterAccount) {
         const isPasswordCorrect = bcryptjs.compareSync(password, requesterAccount.hashedPassword);
         if (isPasswordCorrect) {
@@ -114,7 +115,8 @@ async function run() {
       const pager = paginate(billings.length, page, pageSize);
       // get page of items from items array
       const pageOfItems = billings.slice(pager.startIndex, pager.endIndex + 1);
-      res.send({ page: page, pageOfItems: pageOfItems });
+      res.send({ pager, pageOfItems });
+
     });
 
     // Edit Billing
